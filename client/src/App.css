@@ -1,0 +1,116 @@
+*::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+main {
+  background-color: #ececec;
+  min-height: 100vh;
+  padding-top: 5.5rem;
+  /* background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover; */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.container {
+  width: 100vw;
+  min-height: 100vh;
+  height: fit-content;
+  background-color: rgb(239, 242, 245);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+}
+.header {
+  width: 100vw;
+  height: 60px;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  box-shadow:  0 0 1px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.cars-container {
+  width: 680px;
+  height: fit-content;
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+}
+
+.card {
+  width: 100%;
+  background-color: #fff;
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow:  0 0 1px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.create-form {
+  height: 100px;
+}
+
+.create-btn{
+  background-color: lightblue;
+  height: 20px;
+  width: 100px;
+}
+
+.car-list {
+  width: 100%;
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+}
+
+.car-list .car {
+  position: relative;
+  padding: 10px 30px;
+}
+.car-list .car .content {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+table tr:last-child {
+  border-top: 1px solid black;
+  padding-top: 10px;
+}
+
+.delete-btn button {
+  width: 10px;
+  height: 10px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: black;
+}
+
+button{
+  background-color: transparent;
+  border: none;
+  border-radius: 5px;
+}
+button:hover{
+  cursor: pointer;
+}

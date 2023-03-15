@@ -1,0 +1,103 @@
+.create-form {
+  height: fit-content;
+  padding: 0 20px;
+  display: flex;
+}
+
+.create-car-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.create-car-form .form-group {
+  display: flex;
+  flex-direction: column;
+  margin-left: 0;
+  margin-right: 0;
+  padding-top: 20px;
+  margin-bottom: -10px;
+  width: 480px;
+}
+
+.create-car-form .form-group {
+  display: flex;
+  flex-direction: column-reverse;
+  margin-left: 0;
+  margin-right: 0;
+  padding-top: 20px;
+  margin-bottom: -10px;
+}
+
+.create-car-form .form-label {
+  color: black;
+  font-size: 13px;
+  text-align: center;
+}
+
+.create-car-form .form-control {
+  border: 1px solid #00695a;
+}
+
+.create-car-form .form-control:disabled {
+  border: none;
+  background-color: transparent;
+  border-radius: 0;
+  text-align: center;
+  border-bottom: 1px solid;
+}
+
+
+
+.create-car-form .form-control {
+  text-align: center;
+}
+
+.create-car-form button {
+  background: transparent ;
+  padding: 0;
+  box-shadow: none;
+  margin-bottom: -10px;
+  font-size: 25px;
+  color: #009b85;
+}
+
+.create-car-form .buttons {
+  text-align: right;
+}
+
+.create-car-form .error label {
+  color: red;
+  text-shadow: none;
+}
+
+.create-car-form.form-group {
+  margin-bottom: 0px;
+}
+
+.create-car-form {
+  width: 100%;
+}
+
+.create-car-form .form-control:disabled {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.parts-list.card {
+  margin-left: 30px;
+  margin-right: 30px;
+}
+
+.submit-btn {
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.submit-btn button:disabled{
+  color: rgb(186, 184, 184);
+  cursor:default;
+}
