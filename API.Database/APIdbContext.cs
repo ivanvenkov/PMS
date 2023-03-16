@@ -1,6 +1,5 @@
 ﻿using API.Database.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 namespace API.Database
 {
@@ -12,13 +11,5 @@ namespace API.Database
 
         public DbSet<Vehicle> Vehicles { get; set; }
 
-
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //{
-        //    if (!optionsBuilder.IsConfigured)
-        //    {
-        //        optionsBuilder.UseSqlServer("Server=.\\SQLEXPRESS;Database=PMS;Trusted_Connection=True; TrustServerCertificate=True");
-        //    }
-        //}
     }   
 }

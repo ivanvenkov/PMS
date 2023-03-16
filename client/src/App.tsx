@@ -50,20 +50,6 @@ const App: React.FC = () => {
       });
   }, []);
 
-  // useEffect(() => {
-  //   fetch(`${BASE_URL}/parking/get-all-client-vehicles`, {
-  //     method: 'GET'
-  //   })
-  //     .then((res) => res.json())
-  //     .then((res) => {
-  //       if (res.error) {
-  //         setError(res.error.message);
-  //       } else {
-  //         setCarsList(res);
-  //       }
-  //     });
-  // }, []);
-
   useEffect(() => {
     fetch(`${BASE_URL}/parking/get-available-spaces`, {
       method: 'GET'

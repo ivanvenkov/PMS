@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace API.Application.Models
 {
-    public record AdmitVehicleRequest
+    public class AdmitVehicleRequest
     {
         [JsonPropertyName("regNumber")]
         public string RegNumber { get; set; }
