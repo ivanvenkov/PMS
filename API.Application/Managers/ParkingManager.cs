@@ -1,4 +1,5 @@
-﻿using API.Application.Models;
+﻿using API.Application.Exceptions;
+using API.Application.Models;
 using API.Application.Models.Discounts;
 using API.Application.Models.Vehicles;
 using API.Database;
@@ -12,6 +13,9 @@ namespace API.Application.Managers
     public class ParkingManager : IParkingManager
     {
         private const int parkingCapacity = 200;
+        private const int nightTimeDuration = 14;
+        private const int dayTimeDuration = 10;
+        private const int From18To24Duration = 6;
         private readonly APIdbContext context;
 
         public ParkingManager(APIdbContext context) => this.context = context;
@@ -19,7 +23,7 @@ namespace API.Application.Managers
         public async Task<AvailableSpacesResponse> GetAvailableParkingSpaces()
         {
             var spacesOccupied = await this.context.Vehicles
-                .Where(x=>x.TimeOfLeaving == null)
+                .Where(x => x.TimeOfLeaving == null)
                 .Select(x => x.ParkingSpacesOccupied)
                 .SumAsync();
             var availableSpaces = parkingCapacity - spacesOccupied > 0 ? parkingCapacity - spacesOccupied : 0;
@@ -30,13 +34,13 @@ namespace API.Application.Managers
         public async Task<List<GetAllParkedVehiclesResponse>> GetAllParkedVehicles()
         {
             var response = new List<GetAllParkedVehiclesResponse>();
-            var vehicles =  await this.context.Vehicles
+            var vehicles = await this.context.Vehicles
                 .Where(x => x.TimeOfEntry != null && x.TimeOfLeaving == null)
                 .ToListAsync();
 
             foreach (var vehicle in vehicles)
             {
-                var accumulatedCharge = this.GetAccumulatedChargeByRegistrationNumber(vehicle.RegistrationNumber).Result.AccumulatedCharge;
+                var accumulatedCharge = this.GetAccumulatedChargeByVehicle(vehicle).AccumulatedCharge;
                 var discount = vehicle.Discounts != null ? this.GetDiscount(vehicle.Discounts.Value, accumulatedCharge) : 0m;
                 var totalCharge = accumulatedCharge - discount;
 
@@ -75,11 +79,11 @@ namespace API.Application.Managers
 
             if (currentVehicle != null && currentVehicle.Discounts == null)
             {
-                throw new InvalidOperationException($"A vehicle with registration number '{request.RegNumber}' is already in.");
+                throw new VehicleException($"A vehicle with registration number '{request.RegNumber}' is already in.");
             }
             else if ((currentVehicle != null && currentVehicle.Discounts != null) && currentVehicle.TimeOfLeaving == null)
             {
-                throw new InvalidOperationException($"A vehicle with registration number '{request.RegNumber}' is already in.");
+                throw new VehicleException($"A vehicle with registration number '{request.RegNumber}' is already in.");
             }
             else if ((currentVehicle != null && currentVehicle.Discounts != null) && currentVehicle.TimeOfLeaving != null)
             {
@@ -125,7 +129,7 @@ namespace API.Application.Managers
 
             int result;
             var vehicle = await this.context.Vehicles.FirstOrDefaultAsync(x => x.RegistrationNumber == request.RegNumber.ToUpper());
- 
+
             if (vehicle.Discounts == null)
             {
                 this.context.Vehicles.Remove(vehicle);
@@ -159,17 +163,32 @@ namespace API.Application.Managers
         public async Task<GetAccumulatedChargeResponse> GetAccumulatedChargeByRegistrationNumber(string regNumber)
         {
             var vehicle = await this.context.Vehicles.FirstOrDefaultAsync(x => x.RegistrationNumber == regNumber.ToUpper());
-            if (vehicle == null)
-                throw new InvalidOperationException($"A vehicle with registration number '{regNumber}' has not been registered with the parking system.");
+             if (vehicle == null)
+                throw new VehicleNotFoundException($"A vehicle with registration number '{regNumber}' has not been registered with the parking system.");
 
             VehicleModel currentVehicle;
             GetAccumulatedChargeResponse accumulatedChargeResponse = null;
 
             currentVehicle = GetVehicleType(vehicle.VehicleTypeDescription);
-            if (currentVehicle == null)  // CHECK LOGIC HERE
-            {
-                return null;
-            }
+           
+            currentVehicle.TimeOfEntry = vehicle.TimeOfEntry;
+            currentVehicle.Discount = vehicle.Discounts;
+            accumulatedChargeResponse = CalculateCharge(currentVehicle);
+            accumulatedChargeResponse.TimeOfEntry = vehicle.TimeOfEntry;
+            accumulatedChargeResponse.RegistrationNumber = vehicle.RegistrationNumber;
+
+            return accumulatedChargeResponse;
+        }
+        private GetAccumulatedChargeResponse GetAccumulatedChargeByVehicle(Vehicle vehicle)
+        {
+            if (vehicle == null)
+                throw new VehicleNotFoundException($"A vehicle with registration number '{vehicle.RegistrationNumber}' has not been registered with the parking system.");
+
+            VehicleModel currentVehicle;
+            GetAccumulatedChargeResponse accumulatedChargeResponse = null;
+
+            currentVehicle = GetVehicleType(vehicle.VehicleTypeDescription);
+           
             currentVehicle.TimeOfEntry = vehicle.TimeOfEntry;
             currentVehicle.Discount = vehicle.Discounts;
             accumulatedChargeResponse = CalculateCharge(currentVehicle);
@@ -189,20 +208,16 @@ namespace API.Application.Managers
             decimal discount;
             decimal totalCharge;
 
-
             bool isNightChargeApplicable = CheckIfNightChargeApplicable((DateTime)vehicle.TimeOfEntry, timeOfLeaving);
             if (isNightChargeApplicable)
             {
                 var nightChargeHours = CheckNightChargePart((DateTime)vehicle.TimeOfEntry, timeOfLeaving);
                 if (nightChargeHours > 0)
                 {
-                    //var accumulatedCharge = this.GetAccumulatedChargeByRegistrationNumber(vehicle.RegistrationNumber).Result.AccumulatedCharge;
-                    //var discount = vehicle.Discounts != null ? this.GetDiscount(vehicle, accumulatedCharge) : 0m;
-                    //var totalCharge = accumulatedCharge - discount;
                     if (timeElapsed.TotalHours > 24)
                     {
                         var fullDays = Math.Floor(timeElapsed.TotalHours / 24);
-                        accumulatedCharge = (int)fullDays * (14 * vehicle.NighttimeCharge + 10 * vehicle.DaytimeCharge);
+                        accumulatedCharge = (int)fullDays * (nightTimeDuration* vehicle.NighttimeCharge + dayTimeDuration * vehicle.DaytimeCharge);
                         timeOfEntry = timeOfEntry.AddDays(fullDays);
                         nightChargeHours = this.CheckNightChargePart(timeOfEntry, timeOfLeaving);
                         timeElapsed = timeOfLeaving - timeOfEntry;
@@ -212,7 +227,6 @@ namespace API.Application.Managers
                     accumulatedCharge += CalculateHours(timeElapsed.TotalHours - nightChargeHours) * vehicle.DaytimeCharge;
                     discount = vehicle.Discount != null ? this.GetDiscount(vehicle.Discount.Value, accumulatedCharge) : 0m;
                     totalCharge = accumulatedCharge - discount;
-
                 }
                 else
                 {
@@ -239,19 +253,13 @@ namespace API.Application.Managers
                     AccumulatedCharge = accumulatedCharge,
                     Discount = discount,
                     TotalCharge = totalCharge,
-                    DiscountType =  Enum.GetName(typeof(DiscountTypes), vehicle.Discount.HasValue)
+                    DiscountType = Enum.GetName(typeof(DiscountTypes), vehicle.Discount.HasValue)
                 };
             }
         }
 
-        private decimal GetChargeAfterDiscount(VehicleModel vehicle, decimal accumulatedCharge)
-            => vehicle.Discount != null ? this.GetDiscount(vehicle.Discount.Value, accumulatedCharge) : 0m;
-
-
         private bool CheckIfNightChargeApplicable(DateTime timeOfEntry, DateTime timeOfLeaving)
         {
-            // var timeElapsed = timeOfLeaving - timeOfEntry;
-
             var startNightCharge = TimeSpan.Parse("18:00");
             var endNightCharge = TimeSpan.Parse("08:00");
 
@@ -272,7 +280,7 @@ namespace API.Application.Managers
             {
                 if (endNightCharge >= timeOfLeaving.TimeOfDay && (timeOfEntry.TimeOfDay >= endNightCharge && timeOfEntry.TimeOfDay < startNightCharge))
                 {
-                    var hours = timeOfLeaving.TimeOfDay.TotalHours + 6;
+                    var hours = timeOfLeaving.TimeOfDay.TotalHours + From18To24Duration;
                     nightChargeHours += CalculateHours(hours);
                 }
                 else if (endNightCharge >= timeOfLeaving.TimeOfDay && (timeOfEntry.TimeOfDay >= endNightCharge && timeOfEntry.TimeOfDay >= startNightCharge))
@@ -281,9 +289,15 @@ namespace API.Application.Managers
                     var hours = ((midNight - timeOfEntry.TimeOfDay) + (timeOfLeaving.TimeOfDay - midNight)).TotalHours;
                     nightChargeHours += CalculateHours(hours);
                 }
+                else if (endNightCharge < timeOfLeaving.TimeOfDay && (timeOfEntry.TimeOfDay >= endNightCharge && timeOfEntry.TimeOfDay >= startNightCharge))
+                {
+
+                    var hours = nightTimeDuration - (timeOfEntry.TimeOfDay - startNightCharge).TotalHours;
+                    nightChargeHours += CalculateHours(hours);
+                }
                 else if (timeOfEntry.TimeOfDay < startNightCharge && timeOfLeaving.TimeOfDay > endNightCharge)
                 {
-                    nightChargeHours += 14;
+                    nightChargeHours += nightTimeDuration;
                 }
             }
 
@@ -311,7 +325,6 @@ namespace API.Application.Managers
             return nightChargeHours;
         }
 
-        // Nomenclature for discounts
         private decimal GetDiscount(DiscountTypes vehicle, decimal accumulatedCharge)
         {
             IDiscount currentDiscount;
@@ -325,28 +338,33 @@ namespace API.Application.Managers
                             && t.Name.Contains(discountType)).FirstOrDefault();
 
             if (discount == null)
-                throw new Exception("Not existing type of discount");
+                throw new VehicleException($"There is no '{discount}' discount type currently in the parking management system.");
 
             currentDiscount = (IDiscount)Activator.CreateInstance(discount);
             return currentDiscount.Calculate(accumulatedCharge);
         }
-        private VehicleModel GetVehicleType(string vehicleName)
+
+        private VehicleModel GetVehicleType(string vehicleTypeDescription)
         {
+            if (vehicleTypeDescription == null)
+            {
+                throw new VehicleException($" No vehicle type has been provided for this vehicle.");
+            }
             VehicleModel currentVehicle;
             var vehicleType = Assembly
                             .GetExecutingAssembly()
                             .GetTypes()
                             .Where(t => typeof(VehicleModel).IsAssignableFrom(t)
                             && t.IsClass
-                            && t.Name.Contains(vehicleName)).FirstOrDefault();
+                            && t.Name.Contains(vehicleTypeDescription)).FirstOrDefault();
 
             if (vehicleType == null)
-                throw new Exception("Not existing type of vehicle");
+                throw new VehicleException($"There is no '{vehicleType}' vehicle type currently in the parking system.");
 
             currentVehicle = (VehicleModel)Activator.CreateInstance(vehicleType);
             return currentVehicle;
         }
-
+        
         private int CalculateHours(double hours) => (int)Math.Ceiling(hours);
     }
 }

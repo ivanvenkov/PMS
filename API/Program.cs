@@ -1,6 +1,5 @@
 using API.Application.Filters;
 using API.Application.Managers;
-using API.Application.Models;
 using API.Application.Validators;
 using API.Database;
 using API.Middleware;
@@ -24,7 +23,6 @@ builder.Services.AddControllers(opt =>
 });
 
 builder.Services.AddFluentValidationAutoValidation();
-//builder.Services.AddScoped<IValidator<AdmitVehicleRequest>, AdmitVehicleRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<RemoveVehicleRequestValidator>(); 
 builder.Services.AddValidatorsFromAssemblyContaining<AdmitVehicleRequestValidator>();
 
@@ -46,6 +44,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+
 // Configure the HTTP request pipeline.
 app.UseMiddleware<ExceptionMiddleware>();
 
@@ -66,7 +65,6 @@ app.UseCors(opt =>
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
 
 
